@@ -25,7 +25,11 @@ const App = ()=> {
   return (
     <div className="App">
       <div className='game-container'>
-        <Board {...game} />
+        <Board
+          onClick={i=> console.log(i, 'clicked')}
+          onDoubleClick={i=> console.log(i, 'dblclicked')}
+          {...game}
+        />
       </div>
     </div>
   );

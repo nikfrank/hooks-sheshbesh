@@ -387,8 +387,172 @@ just remember to put it back eventually!
 
 
 
+### clicking the pieces
+
+our users will want to make moves and play the game, and have a comfortable time doing so
+
+to make things easy, let's make some transparent rectangles above each of the spaces on the board for them to click
+
+we'll collect single and double click events (we'll use the double clicks to move a piece home when that's allowed)
 
 
+<sub>./src/Board.js</sub>
+```js
+//...
+
+const Board = ({
+  whiteHome,
+  blackHome,
+  whiteJail,
+  blackJail,
+  chips,
+  onClick = ()=> 0,
+  onDoubleClick = ()=> 0,
+})=> (
+  //...
+
+    {
+      chips.map((chip, i)=> (
+        <g key={i}>
+          {[...Array(Math.abs(chip))].map((_, c)=> (
+            <circle key={c} cx={centers[Math.min( i, 2*centers.length - i - 1 )]}
+                    cy={ i < 12 ? (
+                      60 + (60 - 5*Math.max(0, Math.abs(chip)-6))*c
+                    ) : (
+                      940 - (60 - 5*Math.max(0, Math.abs(chip)-6))*c
+                    ) } r={30}
+                    className={chip < 0 ? 'white-chip' : 'black-chip'}/>
+          ))}
+
+          <rect x={centers[Math.min( i, 2*centers.length - i - 1 )] - 50}
+                width={100}
+                y={ i < 12 ? 20 : 550 } height={430}
+                fill='transparent' stroke='transparent'
+                onDoubleClick={()=> onDoubleClick(i)}
+                onClick={()=> onClick(i)} />
+
+        </g>
+      ))
+    }
+
+//...
+```
+
+for now we'll just log out the index of the space that's been clicked
+
+later, we'll use these event handler callbacks to trigger real state mutations!
+
+<sub>./src/App.js</sub>
+```js
+
+//...
+
+const App = ()=> {
+  const [game, setGame] = useState(initGame);
+  
+  return (
+    <div className="App">
+      <div className='game-container'>
+        <Board
+          onClick={i=> console.log(i, 'clicked')}
+          onDoubleClick={i=> console.log(i, 'dblclicked')}
+          {...game}
+        />
+      </div>
+    </div>
+  );
+};
+
+
+//...
+```
+
+
+### jail and home
+
+once we get our game running, we'll end up with pieces in jail or home. Let's render them now so we're ready for that later.
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+const initGame = {
+  chips: [...initBoard],
+  whiteHome: 15,
+  whiteJail: 5,
+  blackHome: 15,
+  blackJail: 5,
+};
+
+//...
+```
+
+these are the maximum values for home or jail we need to account for
+
+(of course it's possible to have more than 5 in jail, if you've taught your younger brother all the rules wrong and he keeps leaving all of his pieces vulnerable!)
+
+remember in the last step we already passed `whiteHome`, `whiteJail`, `blackHome`, `blackJail` as part of our props shmeer `{...game}` to our `Board` Component
+
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+    {
+      [...Array(whiteJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 60 + 60*i } r={30}
+                className='white-chip'/>
+      ))
+    }
+    {
+      [...Array(blackJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 940 - 60*i } r={30}
+                className='black-chip'/>
+      ))
+    }
+
+```
+
+this will render the jailed pieces in the middle of the board on either side
+
+
+```js
+    {
+      [...Array(whiteHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={25 + 25*i} height={20} width={60} className='white-home' />
+      ))
+    }
+    {
+      [...Array(blackHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={955 - 25*i} height={20} width={60} className='black-home' />
+      ))
+    }
+
+//...
+```
+
+as for home, we've rendered the pieces on their sides (as rectangles... the precocious student may wish to style them with a linear gradient to appear more like the edge of a circular piece...)
+
+
+we'll need some styles for those home pieces...
+
+
+<sub>./src/App.scss</sub>
+```scss
+rect.white-home {
+  fill: #0aa;
+}
+
+rect.black-home {
+  fill: brown;
+}
+```
+
+
+
+now that we have all the pieces rendering we can start thinking through the logic of the game
 
 
 

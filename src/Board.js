@@ -10,6 +10,8 @@ const Board = ({
   whiteJail,
   blackJail,
   chips,
+  onClick = ()=> 0,
+  onDoubleClick = ()=> 0,
 })=> (
   <svg viewBox='0 0 1500 1000' className='Board'>
     <rect x={0} y={0}
@@ -65,9 +67,43 @@ const Board = ({
                     className={chip < 0 ? 'white-chip' : 'black-chip'}/>
           ))}
 
+          <rect x={centers[Math.min( i, 2*centers.length - i - 1 )] - 50}
+                width={100}
+                y={ i < 12 ? 20 : 550 } height={430}
+                fill='transparent' stroke='transparent'
+                onDoubleClick={()=> onDoubleClick(i)}
+                onClick={()=> onClick(i)} />
+
         </g>
       ))
     }
+
+    {
+      [...Array(whiteJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 60 + 60*i } r={30}
+                className='white-chip'/>
+      ))
+    }
+    {
+      [...Array(blackJail)].map((_, i)=>(
+        <circle key={i} cx={710}
+                cy={ 940 - 60*i } r={30}
+                className='black-chip'/>
+      ))
+    }
+
+    {
+      [...Array(whiteHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={25 + 25*i} height={20} width={60} className='white-home' />
+      ))
+    }
+    {
+      [...Array(blackHome)].map((_, i)=> (
+        <rect key={i} x={1420} y={955 - 25*i} height={20} width={60} className='black-home' />
+      ))
+    }
+
 
   </svg>
 );
