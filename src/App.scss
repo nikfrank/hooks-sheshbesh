@@ -1,0 +1,30 @@
+.App {
+  text-align: center;
+}
+
+.Board {
+  max-height: 100vh;
+  max-width: 100vw;
+}
+
+.white-triangle {
+  stroke: black;
+  fill: white;
+}
+
+.black-triangle {
+  stroke: black;
+  fill: black;
+}
+
+circle.white-chip {
+  fill: white;
+  stroke: #0aa;
+  stroke-width: 10px;
+}
+
+circle.black-chip {
+  fill: black;
+  stroke: brown;
+  stroke-width: 10px;
+}

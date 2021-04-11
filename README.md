@@ -217,6 +217,182 @@ our board looks great, now it needs pieces
 
 
 
+### drawing pieces on the board
+
+let's start up in our App by declaring a reactive variable with `useState` with the initial state of a sheshbesh game
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+const initBoard = [
+  2, 0, 0, 0, 0, -5,
+  0, -3, 0, 0, 0, 5,
+  -5, 0, 0, 0, 3, 0,
+  5, 0, 0, 0, 0, -2,
+];
+
+const initGame = {
+  chips: [...initBoard],
+  whiteHome: 0,
+  whiteJail: 0,
+  blackHome: 0,
+  blackJail: 0,
+};
+
+
+const App = ()=> {
+  const [game, setGame] = useState(initGame);
+  
+  return (
+    <div className="App">
+      <div className='game-container'>
+        <Board {...game} />
+      </div>
+    </div>
+  );
+};
+
+//...
+```
+
+what we'll find convenient is to keep track of the occupants of a space on the board using (+) positive numbers to represent black pieces (and how many), with (-) negative numbers representing white pieces (and how many)
+
+of course, we'll need to also keep track of the pieces which are off the board (home / jail) at any given time for each player
+
+
+now of course we can read the values as `props` inside the `Board` Component, and render some more SVG elements for them
+
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+const Board = ({
+  whiteHome,
+  blackHome,
+  whiteJail,
+  blackJail,
+  chips,
+})=> (
+  //...
+
+    {
+      chips.map((chip, i)=> (
+        <g key={i}>
+          {[...Array(Math.abs(chip))].map((_, c)=> (
+            <circle key={c} cx={centers[Math.min( i, 2*centers.length - i - 1 )]}
+                    cy={ i < 12 ? (60 + 60*c) : (940 - 60*c) } r={30}
+                    className={chip < 0 ? 'white-chip' : 'black-chip'}/>
+          ))}
+
+        </g>
+      ))
+    }
+
+
+);
+
+//...
+```
+
+
+notice of course that the pieces are radius 30 and we add 60 for each piece (`60*c`)
+
+this will cause the pieces to line up one atop the other
+
+
+
+<sub>./src/App.scss</sub>
+```scss
+//...
+
+circle.white-chip {
+  fill: white;
+  stroke: #0aa;
+  stroke-width: 10px;
+}
+
+circle.black-chip {
+  fill: black;
+  stroke: brown;
+  stroke-width: 10px;
+}
+```
+
+notice here the stroke overlaps from one piece to the next, which I like from a style point of view.
+
+---
+
+
+this is great until we have too many chips on the board!
+
+if we test out what'd happen if we had 9 pieces on one chip
+
+<sub>./src/App.js<sub>
+```js
+//...
+
+const initBoard = [
+  2, 0, 0, 0, 0, -9,
+  0, -3, 0, 0, 0, 5,
+  -5, 0, 0, 0, 3, 0,
+  5, 0, 0, 0, 0, -2,
+];
+
+//...
+```
+
+
+we'll see that the chips go waaaaay over center
+
+so we need a solution that causes the pieces to overlap when there's more than 6 of them
+
+
+what we'll do is:
+
+ - when there's 6 or fewer pieces, continue multiplying by 60
+ - when there's more than 6 pieces, we'll reduce the multiplicand (60) by a bit for every extra piece
+ 
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+    {
+      chips.map((chip, i)=> (
+        <g key={i}>
+          {[...Array(Math.abs(chip))].map((_, c)=> (
+            <circle key={c} cx={centers[i]}
+                    cy={ i < 12 ? (
+                        60 + (60 - 5*Math.max(0, Math.abs(chip)-6))*c
+                    ) : (
+                        940 - (60 - 5*Math.max(0, Math.abs(chip)-6))*c
+                    ) } r={30}
+                    className={chip < 0 ? 'white-chip' : 'black-chip'}/>
+          ))}
+        </g>
+      ))
+    }
+
+
+//...
+```
+
+now we can try this out with different numbers of pieces (only needs to work up to 15 of course) by editing the hardcoded initial board state
+
+
+just remember to put it back eventually!
+
+
+
+
+
+
+
+
+
 
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
