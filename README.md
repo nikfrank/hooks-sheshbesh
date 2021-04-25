@@ -393,10 +393,11 @@ just remember to put it back eventually!
 
 our users will want to make moves and play the game, and have a comfortable time doing so
 
-to make things easy, let's make some transparent rectangles above each of the spaces on the board for them to click
+to make things easy, let's make some invisible rectangles above each of the spaces on the board for them to click
 
 we'll collect single and double click events (we'll use the double clicks to move a piece home when that's allowed)
 
+these rectangles will help us avoid problems where the click event could hit the triangle, circle or background
 
 <sub>./src/Board.js</sub>
 ```js
@@ -793,6 +794,89 @@ and of course, we'll want to make sure the dice look nice
 //...
 ```
 
+
+
+#### event logic for selecting and moving a piece
+
+remember earlier of course we made some invisible rectangles for the user to click on
+
+now we'll respond to the click events by selecting then moving pieces
+
+in pseudocode
+
+```
+when the player clicks a space
+
+ - if there are no dice, don't do anything
+ - if the player is in jail, check if the space clicked is a legal move from jail
+   - if so, move out of jail
+   - otherwise do nothing
+ - otherwise, the player isn't in jail
+   - if there is no selectedChip, and this chip has legal moves, select it
+   - if there is a selectedChip, and this chip can be moved to legally, move there
+   - if this chip IS the selected chip, unselect it
+ 
+```
+
+let's make a `chipClicked` callback to put our thoughts into action
+
+<sub>./src/App.js</sub>
+```js
+
+//...
+
+  const chipClicked = useCallback((clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !game.dice.length ) return;
+
+    // if turn is in jail
+    if( game[ game.turn + 'Jail' ] ){
+      // if click is on valid move, makeMove(clicked) (return)
+      
+    } else {
+      // if no chip selected
+      if( game.selectedChip === null ){
+        // if click is on turn's chips with legal moves, select that chip (return)
+        setGame(pg=> ({ ...pg, selectedChip: clicked }) );
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === game.selectedChip )
+          setGame(pg=> ({ ...pg, selectedChip: null }) );
+      }
+    }
+  }, [game]);
+
+//...
+
+
+        <Board
+          onClick={chipClicked}
+          onDoubleClick={i=> console.log(i, 'dblclicked')}
+          {...game}
+        />
+
+//...
+
+```
+
+if we put a `console.log(game, clicked);` in there, we can see that our click-selecting is working fine
+
+however, our `App` component is getting a bit hairy, which means this is a good time to start thinking about refactoring
+
+we're going to need to write a few functions which make updates into nested parts of our `game` state variable
+
+(we already started using the updater-spread pattern to do this with a standard `useState` setup)
+
+React gives us a hook which is meant for this situation, which I'd like for us to learn about here [useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer)
+
+by writing our game update logic in reducers, we'll be able to maintain a more readable & testable codebase.
+
+
+#### refactoring to `useReducer` and `<Game />`
 
 
 

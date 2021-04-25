@@ -38,13 +38,39 @@ const App = ()=> {
     null :
     setGame(prev=> ({ ...prev, dice: randomDice() }))
   ), [game.dice.length, game.turn]);
-    
+
+
+  const chipClicked = useCallback((clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !game.dice.length ) return;
+
+    // if turn is in jail
+    if( game[ game.turn + 'Jail' ] ){
+      // if click is on valid move, makeMove(clicked) (return)
+      
+    } else {
+      // if no chip selected
+      if( game.selectedChip === null ){
+        // if click is on turn's chips with legal moves, select that chip (return)
+        setGame(pg=> ({ ...pg, selectedChip: clicked }) );
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === game.selectedChip )
+          setGame(pg=> ({ ...pg, selectedChip: null }) );
+      }
+    }
+  }, [game]);
+
   
   return (
     <div className="App">
       <div className='game-container'>
         <Board
-          onClick={i=> console.log(i, 'clicked')}
+          onClick={chipClicked}
           onDoubleClick={i=> console.log(i, 'dblclicked')}
           {...game}
         />
