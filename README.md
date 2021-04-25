@@ -170,6 +170,8 @@ now we can position the `Board` and colour our triangles
 <sub>./src/App.scss</sub>
 ```scss
 .Board {
+  height: 100vh;
+  width: auto;
   max-height: 100vh;
   max-width: 100vw;
 }
@@ -553,6 +555,243 @@ rect.black-home {
 
 
 now that we have all the pieces rendering we can start thinking through the logic of the game
+
+
+
+### taking turns
+
+we'll need a few more values in our `state` to keep track of the dice and whose turn it is
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+const initGame = {
+  chips: [...initBoard],
+  whiteHome: 0,
+  whiteJail: 0,
+  blackHome: 0,
+  blackJail: 0,
+
+  turn: 'black',
+  dice: [],
+  selectedChip: null,
+};
+
+//...
+```
+
+we'll also keep track of whether there's a chip selected (which we'll use when we start trying to move the pieces around)
+
+now we should give the user a way to roll the dice so we can start playing
+
+
+#### rolling dice
+
+let's make a button and position it nicely in the middle of the Board
+
+<sub>./src/App.js</sub>
+```js
+//...
+        <Board .../>
+
+        <div className='dice-container'>
+          {!game.dice.length ? (
+             <button onClick={roll}>roll</button>
+          ) : game.dice}
+        </div>
+
+//...
+```
+
+<sub>./src/App.scss</sub>
+```scss
+body {
+  overflow: hidden;
+}
+
+.App {
+  display: flex;
+  justify-content: center;
+}
+
+.game-container {
+  position: relative;
+}
+
+//...
+
+.dice-container {
+  position: absolute;
+  height: 100px;
+  top: calc( 50% - 50px );
+
+  width: 100px;
+  left: calc( 47.33% - 50px );
+}
+```
+
+and our roll function `useCallback`
+
+<sub>./src/App.js</sub>
+```js
+
+const randomDice = ()=> {
+  return [ Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
+};
+
+
+  //...
+
+  const roll = useCallback(()=> (
+    game.dice.length || (game.turn !== 'black')?
+    null :
+    setGame(prev=> ({ ...prev, dice: randomDice() }))
+  ), [game.dice.length, game.turn]);
+
+  //...
+```
+
+now we should be able to roll the dice once
+
+we'll see that we need to do something about doubles!
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+const randomDice = ()=> {
+  const dice = [ Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
+
+  return ( dice[0] !== dice[1] ) ? dice : [...dice, ...dice];
+};
+
+//...
+```
+
+
+now let's take a break from our busy lives to make a happy little component that draws dice on the screen.
+
+
+`$ touch src/Dice.js`
+
+<sub>./src/Dice.js</sub>
+```js
+import React from 'react';
+
+const Dice = ({ dice })=>
+  dice.map((die, i)=> (
+    <svg viewBox='0 0 100 100' key={i} className='die'>
+      <rect x={0} y={0} height={100} width={100} rx={12}/>
+
+      {die === 1 ? (
+         <circle cx={50} cy={50} r={10} />
+      ): die === 2 ? (
+         <g>
+           <circle cx={33} cy={33} r={10} />
+           <circle cx={67} cy={67} r={10} />
+         </g>
+      ): die === 3 ? (
+         <g>
+           <circle cx={33} cy={33} r={10} />
+           <circle cx={50} cy={50} r={10} />
+           <circle cx={67} cy={67} r={10} />
+         </g>
+      ): die === 4 ? (
+        <g>
+          <circle cx={33} cy={33} r={10} />
+          <circle cx={33} cy={67} r={10} />
+          <circle cx={67} cy={33} r={10} />
+          <circle cx={67} cy={67} r={10} />
+        </g>
+      ): die === 5 ? (
+        <g>
+          <circle cx={33} cy={33} r={10} />
+          <circle cx={33} cy={67} r={10} />
+          <circle cx={67} cy={33} r={10} />
+          <circle cx={50} cy={50} r={10} />
+          <circle cx={67} cy={67} r={10} />
+        </g>
+      ): die === 6 ? (
+        <g>
+          <circle cx={33} cy={33} r={10} />
+          <circle cx={33} cy={50} r={10} />
+          <circle cx={33} cy={67} r={10} />
+          <circle cx={67} cy={33} r={10} />
+          <circle cx={67} cy={50} r={10} />
+          <circle cx={67} cy={67} r={10} />
+        </g>
+      ): null}
+    </svg>
+  ));
+
+export default Dice;
+```
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+import Dice from './Dice';
+
+//...
+
+      <div className='dice-container'>
+        {!game.dice.length ? (
+          <button onClick={roll}>roll</button>
+        ) : (
+          <Dice dice={game.dice} />
+        )}
+      </div>
+
+//...
+
+```
+
+and of course, we'll want to make sure the dice look nice
+
+
+<sub>./src/App.scss</sub>
+```scss
+
+.dice-container {
+  position: absolute;
+  height: 100px;
+  top: calc( 50% - 50px );
+
+  width: 100px;
+  left: calc( 47.33% - 50px );
+
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.die {
+  height: 40px;
+  width: 40px;
+  margin: 3px;
+}
+
+.die rect {
+  fill: white;
+  stroke: black;
+  stroke-width: 4px;
+}
+
+.dice-container button {
+  background-color: white;
+  border-radius: 8px;
+  padding: 12px;
+  outline: none;
+  font-weight: 900;
+}
+
+//...
+```
 
 
 
