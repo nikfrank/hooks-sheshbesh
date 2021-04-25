@@ -1,8 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useReducer, useMemo } from 'react';
 import './App.scss';
 
-import Board from './Board';
-import Dice from './Dice';
+import Game from './Game';
 
 const initBoard = [
   2, 0, 0, 0, 0, -5,
@@ -29,60 +28,39 @@ const randomDice = ()=> {
   return ( dice[0] !== dice[1] ) ? dice : [...dice, ...dice];
 };
 
+const gameReducers = {
+  selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
+  unselectChip: state=> ({ ...state, selectedChip: null }),
+  setDice: (state, action)=> ({ ...state, dice: action.payload }),
+};
+
+const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
+
+const actions = dispatch=> Object
+  .keys(gameReducers)
+  .reduce((rr, type)=> ({ ...rr, [type]: payload=> dispatch({ type, payload }) }), {});
 
 const App = ()=> {
-  const [game, setGame] = useState(initGame);
+  const [game, setGame] = useReducer(gameReducer, initGame);
+
+  const { selectChip, unselectChip, setDice } = useMemo(()=> actions(setGame), [setGame]);
 
   const roll = useCallback(()=> (
     game.dice.length || (game.turn !== 'black')?
     null :
-    setGame(prev=> ({ ...prev, dice: randomDice() }))
-  ), [game.dice.length, game.turn]);
+    setDice(randomDice())
+  ), [game.dice.length, game.turn, setDice]);
 
-
-  const chipClicked = useCallback((clicked)=>{
-    // if no dice, do nothing (wait for roll)
-    if( !game.dice.length ) return;
-
-    // if turn is in jail
-    if( game[ game.turn + 'Jail' ] ){
-      // if click is on valid move, makeMove(clicked) (return)
-      
-    } else {
-      // if no chip selected
-      if( game.selectedChip === null ){
-        // if click is on turn's chips with legal moves, select that chip (return)
-        setGame(pg=> ({ ...pg, selectedChip: clicked }) );
-        
-      } else {
-        // else this is a second click
-        // if the space selected is a valid move, makeMove(clicked)
-
-        // if another click on the selectedChip, unselect the chip
-        if( clicked === game.selectedChip )
-          setGame(pg=> ({ ...pg, selectedChip: null }) );
-      }
-    }
-  }, [game]);
-
+  useMemo(()=> console.log(game), [game]);
   
   return (
     <div className="App">
-      <div className='game-container'>
-        <Board
-          onClick={chipClicked}
-          onDoubleClick={i=> console.log(i, 'dblclicked')}
-          {...game}
-        />
-
-        <div className='dice-container'>
-          {!game.dice.length ? (
-            <button onClick={roll}>roll</button>
-          ) : (
-            <Dice dice={game.dice} />
-          )}
-        </div>
-      </div>
+      <Game
+        selectChip={selectChip}
+        unselectChip={unselectChip}
+        roll={roll}
+        {...game}
+      />
     </div>
   );
 };

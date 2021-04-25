@@ -878,7 +878,259 @@ by writing our game update logic in reducers, we'll be able to maintain a more r
 
 #### refactoring to `useReducer` and `<Game />`
 
+first, let's change our `useState` to a `useReducer`
 
+<sub>./src/App.js</sub>
+```js
+import React, { useState, useCallback, useReducer, useMemo } from 'react';
+
+//...
+
+const gameReducers = {
+  selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
+  unselectChip: state=> ({ ...state, selectedChip: null }),
+  setDice: (state, action)=> ({ ...state, dice: action.payload }),
+};
+
+const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
+
+const actions = dispatch=> Object
+  .keys(gameReducers)
+  .reduce((rr, type)=> ({ ...rr, [type]: payload=> dispatch({ type, payload }) }), {});
+
+
+//...
+
+  const [game, setGame] = useReducer(gameReducer, initGame);
+
+  const { selectChip, unselectChip, setDice } = useMemo(()=> actions(setGame), [setGame]);
+
+```
+
+
+now we can change our `setGame(pg=> ({ ...pg, /* etc */ }) )` updater-spread calls to action-creator calls.
+
+```js
+
+  //...
+
+  const roll = useCallback(()=> (
+    game.dice.length || (game.turn !== 'black')?
+    null :
+    setDice(randomDice())
+  ), [game.dice.length, game.turn, setDice]);
+
+
+  const chipClicked = useCallback((clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !game.dice.length ) return;
+
+    // if turn is in jail
+    if( game[ game.turn + 'Jail' ] ){
+      // if click is on valid move, makeMove(clicked) (return)
+      
+    } else {
+      // if no chip selected
+      if( game.selectedChip === null ){
+        // if click is on turn's chips with legal moves, select that chip (return)
+        selectChip(clicked);
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === game.selectedChip )
+          unselectChip();
+      }
+    }
+  }, [game, selectChip, unselectChip]);
+
+//...
+```
+
+perhaps later we'll move some of that dice checking logic into the reducer.
+
+meanwhile, the function calls are now a lot cleaner
+
+
+---
+
+
+now we can go ahead and make a `Game` component (which will allow us to spread our `game` nested state onto props)
+
+`$ touch src/Game.js`
+
+
+and move most of the logic over into it
+
+<sub>./src/Game.js</sub>
+```js
+import React, { useCallback } from 'react';
+
+import Board from './Board';
+import Dice from './Dice';
+
+
+const Game = ({
+  selectChip,
+  unselectChip,
+
+  selectedChip,
+  
+  roll,
+  dice,
+  
+  turn,
+  chips,
+  
+  blackJail,
+  whiteJail,
+  blackHome,
+  whiteHome,
+})=> {
+
+  const chipClicked = useCallback((clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !dice.length ) return;
+
+    // if turn is in jail
+    if( (turn === 'black' && blackJail) || (turn === 'white' && whiteJail) ){
+      // if click is on valid move, makeMove(clicked) (return)
+      
+    } else {
+      // if no chip selected
+      if( selectedChip === null ){
+        // if click is on turn's chips with legal moves, select that chip (return)
+        selectChip(clicked);
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === selectedChip )
+          unselectChip();
+      }
+    }
+  }, [
+    dice,
+    selectedChip,
+    blackJail,
+    whiteJail,
+    turn,
+    selectChip,
+    unselectChip
+  ]);
+  
+  return (
+    <div className='game-container'>
+      <Board
+        onClick={chipClicked}
+        onDoubleClick={i=> console.log(i, 'dblclicked')}
+        {...{
+          whiteHome,
+          blackHome,
+          whiteJail,
+          blackJail,
+          chips,
+        }}
+      />
+
+      <div className='dice-container'>
+        {!dice.length ? (
+          <button onClick={roll}>roll</button>
+        ) : (
+          <Dice dice={dice} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Game;
+
+```
+
+fomr the `App` component, which now is really just a place for the state and 'impure' functions to live
+
+<sub>./src/App.js</sub>
+```js
+import React, { useCallback, useReducer, useMemo } from 'react';
+import './App.scss';
+
+import Game from './Game';
+
+const initBoard = [
+  2, 0, 0, 0, 0, -5,
+  0, -3, 0, 0, 0, 5,
+  -5, 0, 0, 0, 3, 0,
+  5, 0, 0, 0, 0, -2,
+];
+
+const initGame = {
+  chips: [...initBoard],
+  whiteHome: 0,
+  whiteJail: 0,
+  blackHome: 0,
+  blackJail: 0,
+
+  turn: 'black',
+  dice: [],
+  selectedChip: null,
+};
+
+const randomDice = ()=> {
+  const dice = [ Math.ceil(Math.random()*6), Math.ceil(Math.random()*6)];
+
+  return ( dice[0] !== dice[1] ) ? dice : [...dice, ...dice];
+};
+
+const gameReducers = {
+  selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
+  unselectChip: state=> ({ ...state, selectedChip: null }),
+  setDice: (state, action)=> ({ ...state, dice: action.payload }),
+};
+
+const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
+
+const actions = dispatch=> Object
+  .keys(gameReducers)
+  .reduce((rr, type)=> ({ ...rr, [type]: payload=> dispatch({ type, payload }) }), {});
+
+const App = ()=> {
+  const [game, setGame] = useReducer(gameReducer, initGame);
+
+  const { selectChip, unselectChip, setDice } = useMemo(()=> actions(setGame), [setGame]);
+
+  const roll = useCallback(()=> (
+    game.dice.length || (game.turn !== 'black')?
+    null :
+    setDice(randomDice())
+  ), [game.dice.length, game.turn, setDice]);
+
+  useMemo(()=> console.log(game), [game]);
+  
+  return (
+    <div className="App">
+      <Game
+        selectChip={selectChip}
+        unselectChip={unselectChip}
+        roll={roll}
+        {...game}
+      />
+    </div>
+  );
+};
+
+export default App;
+
+```
+
+
+the best reason this will be useful later, is it will make adding network play easy!
+
+(we can have the network handlers in the `App` so the `Game` won't notice who the other player is)
 
 
 
