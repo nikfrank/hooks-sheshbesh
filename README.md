@@ -1134,5 +1134,444 @@ the best reason this will be useful later, is it will make adding network play e
 
 
 
+#### continuing event logic
+
+now that our chip selection is refactored to inside the `Game` component, let's continue coding it.
+
+we should only be able to select chips for the current player
+
+<sub>./src/Game.js</sub>
+```js
+//...
+
+  const chipClicked = useCallback((clicked)=>{
+    // if no dice, do nothing (wait for roll)
+    if( !dice.length ) return;
+
+    // if turn is in jail
+    if( (turn === 'black' && blackJail) || (turn === 'white' && whiteJail) ){
+      // if click is on valid move, makeMove(clicked) (return)
+      
+    } else {
+      if( selectedChip === null ) {
+        if (
+          (turn === 'black' && chips[clicked] > 0 ) ||
+          (turn === 'white' && chips[clicked] < 0 )
+        ) selectChip(clicked);
+        
+      } else {
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+
+        // if another click on the selectedChip, unselect the chip
+        if( clicked === selectedChip ) unselectChip();
+      }
+    }
+  }, [
+    dice,
+    selectedChip,
+    blackJail,
+    whiteJail,
+    turn,
+    selectChip,
+    unselectChip
+  ]);
+
+  //...
+
+      <Board
+        onClick={chipClicked}
+        onDoubleClick={i=> console.log(i, 'dblclicked')}
+        {...{
+          whiteHome,
+          blackHome,
+          whiteJail,
+          blackJail,
+          chips,
+          selectedChip,
+        }}
+      />
+
+
+//...
+```
+
+and we should style the `selectedChip`'s triangle
+
+<sub>./src/Board.js</sub>
+```js
+//...
+
+const Board = ({
+  whiteHome,
+  blackHome,
+  whiteJail,
+  blackJail,
+  chips,
+  selectedChip,
+  onClick = ()=> 0,
+  onDoubleClick = ()=> 0,
+})=> (
+
+  //...
+
+          <polygon key={i}
+                   points={`${centers[i]-50},20 ${centers[i]+50},20 ${centers[i]},450`}
+                   className={[
+                     (i%2 ? 'black' : 'white')+'-triangle',
+                     selectedChip === (i + angle / 15) ? 'selected-chip' : ''
+                   ].join(' ')} />
+```
+
+
+<sub>./src/App.scss</sub>
+```scss
+//...
+
+.black-triangle.selected-chip {
+  fill: #880;
+}
+
+.white-triangle.selected-chip {
+  fill: #ff0;
+}
+
+```
+
+those triangles look great eh?
+
+the hawk-eyed will notice that our `Game` is allowing us to select chips which have no legal moves!
+
+now we'll need to figure out which chips have legal moves, so we can block the user from selecting anything else
+
+
+#### `calculateLegalMoves`
+
+every time the dice change, we'll want to keep in our game state a list of legal moves
+
+(once we have that, we'll move on to `calculateBoardAfterMove`... let's not get ahead of ourselves though)
+
+
+((()))
+
+`$ touch src/util.js`
+
+
+<sub>./src/util.js</sub>
+```js
+export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })=>{
+
+};
+```
+
+again, I like to think through this type of problem in English, then translate to js
+
+```
+ - if there's no dice, there's no moves
+
+ - if we're in jail, only spaces 0-5 (black) or 18-23 (white) can be moved to
+   only if there are 1 or fewer opponent pieces (or our pieces are there)
+   
+ - otherwise, for every unique die, for every chip with our piece
+   we can make a move to {chip + die} (black) or {chip - die} (white)
+   only if there are 1 or fewer opponent pieces (or our pieces are there)
+ 
+ - if all of our pieces are in the last 6 slots, we can move to home if
+   the die is the exact distance to home OR
+   the die is greater than our furthest piece and we're trying to move our furthest piece
+```
+
+we'll want to return our moves as an array of `{ moveFrom, moveTo, usedDie }` objects
+
+
+```js
+export const calculateLegalMoves = ({ chips, dice, turn, whiteJail, blackJail })=>{
+  if( !dice.length ) return [];
+
+  if( (turn === 'white') && (whiteJail > 0) ){
+    // check if 23-18 are legal moves by dice
+    return dice.filter(die => ( chips[ 24 - die ] <= 1 ))
+               .map(die => ({ moveFrom: 'whiteJail', moveTo: 24 - die, usedDie: die }) );
+    
+  } else if( (turn === 'black') && (blackJail > 0) ){
+    // check if 0-5 are legal moves by dice
+    return dice.filter(die => ( chips[ die - 1 ] >= -1 ))
+               .map(die => ({ moveFrom: 'blackJail', moveTo: die - 1, usedDie: die }) );
+    
+  } else {
+    // for all dice we have, for all the chips we have, check if chip +/- die is legal
+
+    // if all pieces are in last 6, calculate legal home moves
+  }
+};
+```
+
+moving from jail is fairly straightforward, let's use `.reduce` to calculate legal board moves
+
+```
+first, compute direction (+1 for black, -1 for white) for convenience
+
+second, compute a list of unique dice so we don't compute dupilcate moves
+
+for each of the chips, if it isn't our pieces, there aren't any new moves
+
+if it is, then any unique die which leads to a legal move should make a new move
+
+the new move should be from the chip we're inspecting, to die * direction away
+
+all the new moves from this chip should be returned along with anything else we had so far
+```
+
+
+
+``` js
+//...
+    const direction = turn === 'black' ? 1 : -1;
+    
+    const uniqueDice = Array.from(new Set(dice));
+    
+    const legalMoves = chips.reduce((moves, chip, i)=> (
+      ( chip * direction <= 0 ) ? moves : [
+        ...moves,
+        ...uniqueDice.filter(die => (
+          (chips[ i + direction * die ] * direction >= -1)
+        )).map(die => ({ moveFrom: i, moveTo: i + direction * die, usedDie: die })),
+      ]
+    ), []);
+
+//...
+
+```
+
+and now the home moves, which although intuitive for people, are a bit more comlicated to code
+
+
+```
+calculate how far the furthest piece is from home
+
+if > 6, no legal home moves (we already know we aren't in jail by the else block we're in)
+
+for each spot between 0-5 (white) 18-23 (black)  we have a legal move if
+ - we have the exact die OR
+ - this is the furthest piece and we have a bigger die
+ 
+ moveFrom will be the spot
+ moveTo will be this player's home
+ usedDie will be the exact die or the biggest die
+```
+
+
+```js
+//...
+
+    const legalHomeMoves = (
+      furthestPiece > 6
+    ) ? [] : (
+      turn === 'white'
+    ) ? [0, 1, 2, 3, 4, 5].filter(spot=> (
+      (chips[spot] < 0) && (
+        (uniqueDice.filter(die => die === spot+1).length) ||
+        (uniqueDice.filter(die => ((die >= furthestPiece) && (spot+1 === furthestPiece))).length)
+      )
+    )).map(spot => ({
+      moveFrom: spot,
+      moveTo: 'whiteHome',
+      usedDie: uniqueDice.find(die => die === spot+1) || Math.max(...uniqueDice),
+    })
+
+    ) : [23, 22, 21, 20, 19, 18].filter(spot=> (
+      (chips[spot] > 0) && (
+        (uniqueDice.filter(die => die === 24-spot).length) ||
+        (uniqueDice.filter(die => ((die >= furthestPiece) && (24-spot === furthestPiece))).length)
+      )
+    )).map(spot => ({
+      moveFrom: spot,
+      moveTo: 'blackHome',
+      usedDie: uniqueDice.find(die => die === 24-spot) || Math.max(...uniqueDice),
+    }));
+    
+//...
+```
+
+that could perhaps use a refactor for being too wet, I'll leave that to the reader as an exercise!
+
+
+now all we have to do is return all the legal moves
+
+```js
+//...
+
+    return [
+      ...legalMoves,
+      ...legalHomeMoves,
+    ];
+
+//... (just close curlies)
+```
+
+
+#### testing our legal moves function
+
+let's write some test cases so we can be confident in our outcome
+
+
+`$ touch src/util.test.js`
+
+we'll want to test:
+
+ - moving out of jail (legal moves, no legal moves)
+ - moving normally around the board
+ - moving home
+
+
+<sub>./src/util.test.js</sub>
+```js
+it('moves out of jail', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [2, 6],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 1 );
+  expect( moves[0] ).toEqual({ moveFrom: 'whiteJail', moveTo: 22, usedDie: 2 });
+});
+```
+
+now if we can't get out
+
+```js
+//...
+
+it('no moves out of jail', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [6, 6],
+    turn: 'white',
+    whiteJail: 1,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 0 );
+});
+```
+
+now for a normal move
+
+```js
+//...
+
+it('moves around the board', ()=>{
+  const moves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [5, 2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 6 );
+
+  
+  const moreMoves = calculateLegalMoves({
+    chips: initBoard,
+    dice: [6, 2],
+    turn: 'white',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moreMoves ).toHaveLength( 7 );
+});
+```
+
+here I've tested two cases just to make sure the "blocking" is working
+
+
+now we should test that captures are legal moves
+
+```js
+//...
+
+it('captures', ()=>{
+
+  const captureBoard = [
+    2, 2, -1, -1, -2, -2,
+    0, 0, 0, 0, 0, -9,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 11,
+  ];
+  
+  const moves = calculateLegalMoves({
+    chips: captureBoard,
+    dice: [2, 3],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 3 );
+});
+
+```
+
+
+
+and for moving home, we'll need another arrangement of pieces
+
+```js
+//...
+
+it('moves home', ()=>{
+
+  const moveHomeBoard = [
+    -15, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    0, 0, 0, 5, 5, 5,
+  ];
+  
+  const moves = calculateLegalMoves({
+    chips: moveHomeBoard,
+    dice: [6, 2],
+    turn: 'black',
+    whiteJail: 0,
+    blackJail: 0,
+  });
+
+  expect( moves ).toHaveLength( 3 );
+});
+
+```
+
+
+while that doesn't test every possible case, it is fairly exhaustive and should therefore make us feel more confident in our solution.
+
+
+
+((()))
+
+#### testing our legal moves function
+
+#### calculate board after move
+
+#### testing board after move (jail, captures, normal moves, home)
+
+#### finally moving the pieces
+
+#### moving home (double clicks)
+
+#### starting the game correctly
+
+#### ending the game
+
+
+<a name="step2"></a>
+## step 2: Build a computer player for 1-player local game
+
+
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

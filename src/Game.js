@@ -31,18 +31,18 @@ const Game = ({
       // if click is on valid move, makeMove(clicked) (return)
       
     } else {
-      // if no chip selected
-      if( selectedChip === null ){
-        // if click is on turn's chips with legal moves, select that chip (return)
-        selectChip(clicked);
+      if( selectedChip === null ) {
+        if (
+          (turn === 'black' && chips[clicked] > 0 ) ||
+          (turn === 'white' && chips[clicked] < 0 )
+        ) selectChip(clicked);
         
       } else {
         // else this is a second click
         // if the space selected is a valid move, makeMove(clicked)
 
         // if another click on the selectedChip, unselect the chip
-        if( clicked === selectedChip )
-          unselectChip();
+        if( clicked === selectedChip ) unselectChip();
       }
     }
   }, [
@@ -66,6 +66,7 @@ const Game = ({
           whiteJail,
           blackJail,
           chips,
+          selectedChip,
         }}
       />
 

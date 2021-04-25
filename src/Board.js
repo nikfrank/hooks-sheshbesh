@@ -10,6 +10,7 @@ const Board = ({
   whiteJail,
   blackJail,
   chips,
+  selectedChip,
   onClick = ()=> 0,
   onDoubleClick = ()=> 0,
 })=> (
@@ -48,7 +49,10 @@ const Board = ({
         {[...Array(12)].map((_, i)=>(
           <polygon key={i}
                    points={`${centers[i]-50},20 ${centers[i]+50},20 ${centers[i]},450`}
-                   className={(i%2 ? 'black' : 'white')+'-triangle'} />
+                   className={[
+                     (i%2 ? 'black' : 'white')+'-triangle',
+                     selectedChip === (i + angle / 15) ? 'selected-chip' : ''
+                   ].join(' ')} />
         ))}
       </g>
     ))}
