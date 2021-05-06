@@ -5,7 +5,7 @@ export const initBoard = [
   5, 0, 0, 0, 0, -2,
 ];
 
-const otherTurn = { black: 'white', white: 'black' };
+export const otherTurn = { black: 'white', white: 'black' };
 
 export const calculateBoardAfterMove = (
   { chips, dice, turn, blackJail, whiteJail, blackHome, whiteHome },

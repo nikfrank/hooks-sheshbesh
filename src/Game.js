@@ -24,6 +24,7 @@ const Game = ({
   whiteHome,
 
   makeMove,
+  endTurn,
 })=> {
 
   const legalMoves = useMemo(()=> calculateLegalMoves({
@@ -52,14 +53,17 @@ const Game = ({
   ]);
 
   useEffect(()=> console.log('lm', legalMoves), [legalMoves]);
+  useEffect(()=> dice.length && !legalMoves.length ? endTurn() : null, [legalMoves, dice]);
   
   const chipClicked = useCallback((clicked)=>{
     // if no dice, do nothing (wait for roll)
     if( !dice.length ) return;
-
+    const moveIfLegal = legalMovesForSelectedChip.find(move=> move.moveTo === clicked);
+    
     // if turn is in jail
     if( (turn === 'black' && blackJail) || (turn === 'white' && whiteJail) ){
       // if click is on valid move, makeMove(clicked) (return)
+      if( moveIfLegal ) makeMove(moveIfLegal);
       
     } else {
       if( selectedChip === null ) {
@@ -71,7 +75,6 @@ const Game = ({
       } else {
         // else this is a second click
         // if the space selected is a valid move, makeMove(clicked)
-        const moveIfLegal = legalMovesForSelectedChip.find(move=> move.moveTo === clicked);
         if( moveIfLegal ) makeMove(moveIfLegal);
 
         // if another click on the selectedChip, unselect the chip

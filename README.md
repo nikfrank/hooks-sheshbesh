@@ -1646,7 +1646,26 @@ const otherTurn = { black: 'white', white: 'black' };
 
 //...
 
+    if( !dice.length ) return;
+    const moveIfLegal = legalMovesForSelectedChip.find(move=> move.moveTo === clicked);
+    
+    // if turn is in jail
+    if( (turn === 'black' && blackJail) || (turn === 'white' && whiteJail) ){
+      // if click is on valid move, makeMove(clicked) (return)
+      if( moveIfLegal ) makeMove(moveIfLegal);
+      
 
+
+//... blockades
+
+  endTurn: state => ({ ...state, turn: otherTurn[state.turn], dice: [] })
+  const { selectChip, unselectChip, setDice, makeMove, endTurn } = useMemo(()=> actions(setGame), [setGame]);
+
+        endTurn={endTurn}
+
+  useEffect(()=> dice.length && !legalMoves.length ? endTurn() : null, [legalMoves, dice]);
+
+// maybe we need to show the dice for a second or two (for jailblockade)
 
 
   makeMove = (move)=> {

@@ -2,7 +2,7 @@ import React, { useCallback, useReducer, useMemo } from 'react';
 import './App.scss';
 
 import Game from './Game';
-import { initBoard, calculateBoardAfterMove } from './util';
+import { initBoard, calculateBoardAfterMove, otherTurn } from './util';
 
 const initGame = {
   chips: [...initBoard],
@@ -32,6 +32,7 @@ const gameReducers = {
     ...calculateBoardAfterMove(state, move),
     selectedChip: null,
   }),
+  endTurn: state => ({ ...state, turn: otherTurn[state.turn], dice: [] })
 };
 
 const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
@@ -43,7 +44,7 @@ const actions = dispatch=> Object
 const App = ()=> {
   const [game, setGame] = useReducer(gameReducer, initGame);
 
-  const { selectChip, unselectChip, setDice, makeMove } = useMemo(()=> actions(setGame), [setGame]);
+  const { selectChip, unselectChip, setDice, makeMove, endTurn } = useMemo(()=> actions(setGame), [setGame]);
 
   const roll = useCallback(()=> (
     game.dice.length ? //|| (game.turn !== 'black')?
@@ -59,6 +60,7 @@ const App = ()=> {
         selectChip={selectChip}
         unselectChip={unselectChip}
         makeMove={makeMove}
+        endTurn={endTurn}
         roll={roll}
         {...game}
       />
