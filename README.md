@@ -1596,6 +1596,44 @@ that `setState` call will also have a callback to call another new function (we 
 ```js
 //...
 
+  const legalMoves = useMemo(()=> calculateLegalMoves({
+    dice,
+    turn,
+    chips,
+    blackJail,
+    whiteJail,
+    blackHome,
+    whiteHome,
+  }).filter(move=> (selectedChip === null) || move.moveFrom === selectedChip), [
+    selectedChip,
+    dice,
+    turn,
+    chips,
+    blackJail,
+    whiteJail,
+    blackHome,
+    whiteHome,
+  ]);
+
+//...
+
+        // else this is a second click
+        // if the space selected is a valid move, makeMove(clicked)
+        const moveIfLegal = legalMoves.find(move=> move.moveTo === clicked);
+        console.log(moveIfLegal);
+        if( moveIfLegal ) makeMove(moveIfLegal);
+
+//... (App)
+
+  makeMove: (state, { payload: move })=> ({
+    ...state,
+    ...calculateBoardAfterMove(state, move),
+    selectedChip: null,
+  }),
+
+
+
+
   makeMove = (move)=> {
     this.setState({
       ...calculateBoardAfterMove(this.state, move),

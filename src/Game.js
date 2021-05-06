@@ -1,4 +1,6 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
+
+import { calculateLegalMoves } from './util';
 
 import Board from './Board';
 import Dice from './Dice';
@@ -20,8 +22,31 @@ const Game = ({
   whiteJail,
   blackHome,
   whiteHome,
+
+  makeMove,
 })=> {
 
+  const legalMoves = useMemo(()=> calculateLegalMoves({
+    dice,
+    turn,
+    chips,
+    blackJail,
+    whiteJail,
+    blackHome,
+    whiteHome,
+  }).filter(move=> (selectedChip === null) || move.moveFrom === selectedChip), [
+    selectedChip,
+    dice,
+    turn,
+    chips,
+    blackJail,
+    whiteJail,
+    blackHome,
+    whiteHome,
+  ]);
+
+  useEffect(()=> console.log(legalMoves), [legalMoves]);
+  
   const chipClicked = useCallback((clicked)=>{
     // if no dice, do nothing (wait for roll)
     if( !dice.length ) return;
@@ -40,6 +65,10 @@ const Game = ({
       } else {
         // else this is a second click
         // if the space selected is a valid move, makeMove(clicked)
+        const moveIfLegal = legalMoves.find(move=> move.moveTo === clicked);
+        console.log(moveIfLegal);
+        if( moveIfLegal ) makeMove(moveIfLegal);
+        
 
         // if another click on the selectedChip, unselect the chip
         if( clicked === selectedChip ) unselectChip();
@@ -52,7 +81,9 @@ const Game = ({
     whiteJail,
     turn,
     selectChip,
-    unselectChip
+    unselectChip,
+
+    legalMoves,
   ]);
   
   return (

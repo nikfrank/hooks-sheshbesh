@@ -2,7 +2,7 @@ import React, { useCallback, useReducer, useMemo } from 'react';
 import './App.scss';
 
 import Game from './Game';
-import { initBoard } from './util';
+import { initBoard, calculateBoardAfterMove } from './util';
 
 const initGame = {
   chips: [...initBoard],
@@ -14,6 +14,7 @@ const initGame = {
   turn: 'black',
   dice: [],
   selectedChip: null,
+  legalMoves: [],
 };
 
 const randomDice = ()=> {
@@ -26,9 +27,10 @@ const gameReducers = {
   selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
   unselectChip: state=> ({ ...state, selectedChip: null }),
   setDice: (state, action)=> ({ ...state, dice: action.payload }),
-  makeMove: (state, action)=> ({
+  makeMove: (state, { payload: move })=> ({
     ...state,
-    
+    ...calculateBoardAfterMove(state, move),
+    selectedChip: null,
   }),
 };
 
