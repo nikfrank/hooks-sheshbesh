@@ -2,13 +2,7 @@ import React, { useCallback, useReducer, useMemo } from 'react';
 import './App.scss';
 
 import Game from './Game';
-
-const initBoard = [
-  2, 0, 0, 0, 0, -5,
-  0, -3, 0, 0, 0, 5,
-  -5, 0, 0, 0, 3, 0,
-  5, 0, 0, 0, 0, -2,
-];
+import { initBoard } from './util';
 
 const initGame = {
   chips: [...initBoard],
@@ -32,6 +26,10 @@ const gameReducers = {
   selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
   unselectChip: state=> ({ ...state, selectedChip: null }),
   setDice: (state, action)=> ({ ...state, dice: action.payload }),
+  makeMove: (state, action)=> ({
+    ...state,
+    
+  }),
 };
 
 const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
@@ -43,7 +41,7 @@ const actions = dispatch=> Object
 const App = ()=> {
   const [game, setGame] = useReducer(gameReducer, initGame);
 
-  const { selectChip, unselectChip, setDice } = useMemo(()=> actions(setGame), [setGame]);
+  const { selectChip, unselectChip, setDice, makeMove } = useMemo(()=> actions(setGame), [setGame]);
 
   const roll = useCallback(()=> (
     game.dice.length || (game.turn !== 'black')?
@@ -58,6 +56,7 @@ const App = ()=> {
       <Game
         selectChip={selectChip}
         unselectChip={unselectChip}
+        makeMove={makeMove}
         roll={roll}
         {...game}
       />

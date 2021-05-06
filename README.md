@@ -1252,7 +1252,7 @@ every time the dice change, we'll want to keep in our game state a list of legal
 (once we have that, we'll move on to `calculateBoardAfterMove`... let's not get ahead of ourselves though)
 
 
-((()))
+((( these are old notes, review them nik! )))
 
 `$ touch src/util.js`
 
@@ -1268,6 +1268,8 @@ again, I like to think through this type of problem in English, then translate t
 
 ```
  - if there's no dice, there's no moves
+
+ - while there are dice left, for each die...
 
  - if we're in jail, only spaces 0-5 (black) or 18-23 (white) can be moved to
    only if there are 1 or fewer opponent pieces (or our pieces are there)
@@ -1311,7 +1313,7 @@ moving from jail is fairly straightforward, let's use `.reduce` to calculate leg
 ```
 first, compute direction (+1 for black, -1 for white) for convenience
 
-second, compute a list of unique dice so we don't compute dupilcate moves
+second, compute a list of unique dice so we don't compute duplicate moves
 
 for each of the chips, if it isn't our pieces, there aren't any new moves
 
@@ -1551,7 +1553,6 @@ while that doesn't test every possible case, it is fairly exhaustive and should 
 
 
 
-((()))
 
 #### testing our legal moves function
 
@@ -1559,14 +1560,262 @@ while that doesn't test every possible case, it is fairly exhaustive and should 
 
 #### testing board after move (jail, captures, normal moves, home)
 
+((()))
+
+
 #### finally moving the pieces
 
-#### moving home (double clicks)
+```js
+        makeMove={makeMove}
+```
 
-#### starting the game correctly
+in the `chipClicked` function
 
-#### ending the game
 
+
+((( these are old notes - review them nik! )))
+
+
+### ending the turn (blockades)
+
+as we mentioned before, every time the array of legal moves changes (dice are rolled, a piece is moved), we will want to calculate a new array of legal moves
+
+if that array is empty, the turn is over.
+
+by storing the `legalMoves` in `state`, we could also (as homework!) highlight the chips which the player could move to / from
+
+
+we will implement this by using [react setState callback](https://stackoverflow.com/questions/42038590/when-to-use-react-setstate-callback)
+
+
+in our `roll` function and our `makeMove` function, we'll call a new function `updateLegalMoves` which will update the legal moves in `state`
+
+that `setState` call will also have a callback to call another new function (we bill by the function) `checkTurnOver` which will trigger the `turn` change
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  makeMove = (move)=> {
+    this.setState({
+      ...calculateBoardAfterMove(this.state, move),
+      selectedChip: null
+    }, this.updateLegalMoves);
+  }
+
+  roll = ()=> {
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.updateLegalMoves);
+      
+      else this.updateLegalMoves();
+    })
+  }
+
+  updateLegalMoves = ()=> this.setState({
+    legalMoves: calculateLegalMoves(this.state),
+  }, this.checkTurnOver)
+
+  checkTurnOver = ()=>{
+    if( !this.state.legalMoves.length ) this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    });
+  }
+//...
+```
+
+
+we can also replace in `spaceClicked` our `calculateLegalMoves` call with
+
+```js
+//...
+
+    const { legalMoves } = this.state;
+    
+//...
+```
+
+and we should really initialize `legalMoves` to `[]`
+
+```js
+//...
+
+  state = {
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: 'black',
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  }
+
+//...
+```
+
+and when there are no legal moves, but there are dices remaining, we should show that state for a few seconds so the player is not confused about the turn changing
+
+```js
+//...
+
+  checkTurnOver = ()=>{
+    if( this.state.whiteHome === 15 ) console.log('white wins');
+    if( this.state.blackHome === 15 ) console.log('black wins');
+
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    }), 1000* this.state.dice.length);
+  }
+  
+//...
+```
+
+
+
+### moving home (double clicks)
+
+once the player has gotten their pieces in the home stretch (the last 6 chips before their home), double clicking on a piece should move it home (if that is a legal move)
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  spaceDoubleClicked = (clicked)=> {
+    const legalHomeMove = this.state.legalMoves.find(move => (
+      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
+    ) );
+    
+    if( legalHomeMove )
+      this.setState({
+        ...calculateBoardAfterMove(this.state, legalHomeMove),
+        selectedChip: null,
+      }, this.updateLegalMoves);
+  }
+  
+//...
+```
+
+### starting the game correctly
+
+the correct start of a game of sheshbesh is that both players roll 1 die and the larger roll goes first
+
+so, let's recreate that by setting `turn` initially to `null`, and having the roll button do the first roll for both players
+
+then set whose turn it is based on which die is larger
+
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  state = {
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: null,
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  }
+
+//...
+```
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  roll = ()=> {
+    if( this.state.dice.length ) return;
+
+    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
+      if( !this.state.turn ) {
+        if( this.state.dice[0] === this.state.dice[1] )
+          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
+
+        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, this.updateLegalMoves);
+      }
+
+      if( this.state.dice[0] === this.state.dice[1] )
+        this.setState({
+          dice: [...this.state.dice, ...this.state.dice],
+        }, this.updateLegalMoves);
+      
+      else this.updateLegalMoves();
+    })
+  }
+
+//...
+```
+
+
+
+### ending the game
+
+now that everything works well, we should reset the game if one player wins!
+
+<sub>./src/App.js</sub>
+```js
+//...
+
+  resetGame = ()=> this.setState({
+    chips: [...initBoard],
+    whiteHome: 0,
+    whiteJail: 0,
+    blackHome: 0,
+    blackJail: 0,
+
+    turn: null,
+    dice: [],
+    selectedChip: null,
+    legalMoves: [],
+  })
+
+
+//...
+
+  checkTurnOver = ()=>{
+    if( this.state.whiteHome === 15 ){
+      console.log('white wins');
+      return this.resetGame();
+    }
+    
+    if( this.state.blackHome === 15 ){
+      console.log('black wins');
+      return this.resetGame();
+    }
+
+    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
+      turn: ({ black: 'white', white: 'black' })[this.state.turn],
+      dice: [],
+    }), 1000* this.state.dice.length);
+  }
+
+//...
+```
+
+
+I've made this reset the game without changing whose turn it is... that way the winner goes first in the next game (the strong survive!)
+
+
+congrats on getting through the 2 player local game
+
+next up - the computer player!
+
+((()))
 
 <a name="step2"></a>
 ## step 2: Build a computer player for 1-player local game
