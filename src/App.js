@@ -46,7 +46,7 @@ const App = ()=> {
   const { selectChip, unselectChip, setDice, makeMove } = useMemo(()=> actions(setGame), [setGame]);
 
   const roll = useCallback(()=> (
-    game.dice.length || (game.turn !== 'black')?
+    game.dice.length ? //|| (game.turn !== 'black')?
     null :
     setDice(randomDice())
   ), [game.dice.length, game.turn, setDice]);

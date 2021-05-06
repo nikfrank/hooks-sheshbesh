@@ -5,6 +5,8 @@ export const initBoard = [
   5, 0, 0, 0, 0, -2,
 ];
 
+const otherTurn = { black: 'white', white: 'black' };
+
 export const calculateBoardAfterMove = (
   { chips, dice, turn, blackJail, whiteJail, blackHome, whiteHome },
   { moveFrom, moveTo, usedDie },
@@ -46,10 +48,12 @@ export const calculateBoardAfterMove = (
     if( turn === 'white' ) nextWhiteHome++;
   }
 
+  const nextTurn = dice.length && !nextDice.length ? otherTurn[turn] : turn;
+  
   return {
     dice: nextDice,
     chips: nextChips,
-    turn,
+    turn: nextTurn,
     whiteJail: nextWhiteJail,
     whiteHome: nextWhiteHome,
     blackJail: nextBlackJail,

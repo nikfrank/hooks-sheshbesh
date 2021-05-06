@@ -1632,6 +1632,21 @@ that `setState` call will also have a callback to call another new function (we 
   }),
 
 
+//... util
+
+const otherTurn = { black: 'white', white: 'black' };
+
+  const nextTurn = dice.length && !nextDice.length ? otherTurn[turn] : turn;
+  
+  return {
+    dice: nextDice,
+    chips: nextChips,
+    turn: nextTurn,
+
+
+//...
+
+
 
 
   makeMove = (move)=> {
