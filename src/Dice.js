@@ -1,8 +1,8 @@
 import React from 'react';
 
-const Dice = ({ dice })=>
+const Dice = ({ dice, turn })=>
   dice.map((die, i)=> (
-    <svg viewBox='0 0 100 100' key={i} className='die'>
+    <svg viewBox='0 0 100 100' key={i} className={['die', turn].join(' ')}>
       <rect x={0} y={0} height={100} width={100} rx={12}/>
 
       {die === 1 ? (

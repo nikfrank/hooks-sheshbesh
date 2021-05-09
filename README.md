@@ -1667,88 +1667,9 @@ const otherTurn = { black: 'white', white: 'black' };
 
 // maybe we need to show the dice for a second or two (for jailblockade)
 
-
-  makeMove = (move)=> {
-    this.setState({
-      ...calculateBoardAfterMove(this.state, move),
-      selectedChip: null
-    }, this.updateLegalMoves);
-  }
-
-  roll = ()=> {
-    if( this.state.dice.length ) return;
-
-    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
-      if( this.state.dice[0] === this.state.dice[1] )
-        this.setState({
-          dice: [...this.state.dice, ...this.state.dice],
-        }, this.updateLegalMoves);
-      
-      else this.updateLegalMoves();
-    })
-  }
-
-  updateLegalMoves = ()=> this.setState({
-    legalMoves: calculateLegalMoves(this.state),
-  }, this.checkTurnOver)
-
-  checkTurnOver = ()=>{
-    if( !this.state.legalMoves.length ) this.setState({
-      turn: ({ black: 'white', white: 'black' })[this.state.turn],
-      dice: [],
-    });
-  }
-//...
-```
+  useEffect(()=> dice.length && !legalMoves.length ? setTimeout(endTurn, dice.length * 1000) : null, [legalMoves, dice]);
 
 
-we can also replace in `spaceClicked` our `calculateLegalMoves` call with
-
-```js
-//...
-
-    const { legalMoves } = this.state;
-    
-//...
-```
-
-and we should really initialize `legalMoves` to `[]`
-
-```js
-//...
-
-  state = {
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
-
-    turn: 'black',
-    dice: [],
-    selectedChip: null,
-    legalMoves: [],
-  }
-
-//...
-```
-
-and when there are no legal moves, but there are dices remaining, we should show that state for a few seconds so the player is not confused about the turn changing
-
-```js
-//...
-
-  checkTurnOver = ()=>{
-    if( this.state.whiteHome === 15 ) console.log('white wins');
-    if( this.state.blackHome === 15 ) console.log('black wins');
-
-    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
-      turn: ({ black: 'white', white: 'black' })[this.state.turn],
-      dice: [],
-    }), 1000* this.state.dice.length);
-  }
-  
-//...
 ```
 
 
@@ -1761,18 +1682,19 @@ once the player has gotten their pieces in the home stretch (the last 6 chips be
 <sub>./src/App.js</sub>
 ```js
 //...
+  const chipDoubleClicked = useCallback((clicked)=>{
+    if( !dice.length ) return;
+    const moveIfLegal = legalMoves.find(move=> move.moveFrom === clicked && move.moveTo.includes?.('Home'));
 
-  spaceDoubleClicked = (clicked)=> {
-    const legalHomeMove = this.state.legalMoves.find(move => (
-      (move.moveTo === this.state.turn + 'Home') && (move.moveFrom === clicked)
-    ) );
+    if( moveIfLegal ) makeMove(moveIfLegal);
     
-    if( legalHomeMove )
-      this.setState({
-        ...calculateBoardAfterMove(this.state, legalHomeMove),
-        selectedChip: null,
-      }, this.updateLegalMoves);
-  }
+  }, [dice, legalMoves]);
+  
+  return (
+    <div className='game-container'>
+      <Board
+        onClick={chipClicked}
+        onDoubleClick={chipDoubleClicked}
   
 //...
 ```
@@ -1790,47 +1712,105 @@ then set whose turn it is based on which die is larger
 ```js
 //...
 
-  state = {
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
+const initGame = {
+  chips: [...initBoard],
+  whiteHome: 0,
+  whiteJail: 0,
+  blackHome: 0,
+  blackJail: 0,
 
-    turn: null,
-    dice: [],
-    selectedChip: null,
-    legalMoves: [],
-  }
+  turn: null,
+  dice: [],
+  selectedChip: null,
+  legalMoves: [],
+};
+
+
+const differentDice = ()=>{
+  let dice = [];
+  while(!dice.length || (dice[0] === dice[1])) dice = randomDice();
+  return dice;
+};
+
+  startGame: (state, {payload: dice}={})=> ({ ...state, dice: dice, turn: dice[0] > dice[1] ? 'black' : 'white' }),
+  
+  const roll = useCallback(()=> (
+    game.turn ?
+    game.dice.length ? //|| (game.turn !== 'black')?
+    null :
+    setDice(randomDice()) :
+    startGame(differentDice())
+  ), [game.dice.length, game.turn, setDice]);
+
 
 //...
 ```
 
-<sub>./src/App.js</sub>
+also, we should make an indicator of whose turn it is
+
+I want to use different looking dice for black's turn
+
+<sub>./src/Game.js</sub>
 ```js
-//...
+          <Dice dice={dice} turn={turn} />
+```
 
-  roll = ()=> {
-    if( this.state.dice.length ) return;
 
-    this.setState({ dice: [ Math.random()*6 +1, Math.random()*6 +1 ].map(Math.floor) }, ()=>{
-      if( !this.state.turn ) {
-        if( this.state.dice[0] === this.state.dice[1] )
-          return setTimeout(()=> this.setState({ dice: [] }, this.roll), 2000);
+<sub>./src/Dice.js</sub>
+```js
+const Dice = ({ dice, turn })=>
+  dice.map((die, i)=> (
+    <svg viewBox='0 0 100 100' key={i} className={['die', turn].join(' ')}>
 
-        return this.setState({ turn: this.state.dice[0] > this.state.dice[1] ? 'black' : 'white' }, this.updateLegalMoves);
-      }
+```
 
-      if( this.state.dice[0] === this.state.dice[1] )
-        this.setState({
-          dice: [...this.state.dice, ...this.state.dice],
-        }, this.updateLegalMoves);
-      
-      else this.updateLegalMoves();
-    })
+<sub>./src/App.scss</sub>
+```js
+
+.die {
+  height: 40px;
+  width: 40px;
+  margin: 3px;
+
+  rect {
+    stroke-width: 4px;
   }
 
-//...
+  &.white rect {
+    fill: white;
+    stroke: black;
+  }
+
+  &.black {
+    rect {
+      fill: #f42c2c;
+      stroke: black;
+    }
+    
+    circle {
+      fill: white;
+      stroke-width: 2;
+      stroke: black;
+    }
+  }
+}
+
+```
+
+
+### blocking selectino of a piece with no moves
+
+<sub>./src/Game.js</sub>
+```js
+
+      if( selectedChip === null ) {
+        if (
+          (
+            (turn === 'black' && chips[clicked] > 0 ) ||
+            (turn === 'white' && chips[clicked] < 0 )
+          ) &&
+          legalMoves.find(move => move.moveFrom === clicked)
+        ) selectChip(clicked);
 ```
 
 
@@ -1843,44 +1823,23 @@ now that everything works well, we should reset the game if one player wins!
 ```js
 //...
 
-  resetGame = ()=> this.setState({
-    chips: [...initBoard],
-    whiteHome: 0,
-    whiteJail: 0,
-    blackHome: 0,
-    blackJail: 0,
+  restartGame: () => initGame,
 
-    turn: null,
-    dice: [],
-    selectedChip: null,
-    legalMoves: [],
-  })
+  const { selectChip, setDice, makeMove, endTurn, startGame, restartGame } = useMemo(()=> actions(setGame), [setGame]);
 
-
-//...
-
-  checkTurnOver = ()=>{
-    if( this.state.whiteHome === 15 ){
-      console.log('white wins');
-      return this.resetGame();
-    }
-    
-    if( this.state.blackHome === 15 ){
-      console.log('black wins');
-      return this.resetGame();
-    }
-
-    if( !this.state.legalMoves.length ) setTimeout(()=> this.setState({
-      turn: ({ black: 'white', white: 'black' })[this.state.turn],
-      dice: [],
-    }), 1000* this.state.dice.length);
-  }
-
-//...
+        endGame={restartGame}
 ```
 
+<sub>./src/Game.js</sub>
+```js
 
-I've made this reset the game without changing whose turn it is... that way the winner goes first in the next game (the strong survive!)
+// props
+  endGame,
+
+
+  useEffect(()=> Math.max(whiteHome, blackHome) === 15 ? endGame() : null, [whiteHome, blackHome, endGame]);
+
+```
 
 
 congrats on getting through the 2 player local game

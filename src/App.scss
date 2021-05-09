@@ -69,12 +69,28 @@ rect.black-home {
   height: 40px;
   width: 40px;
   margin: 3px;
-}
 
-.die rect {
-  fill: white;
-  stroke: black;
-  stroke-width: 4px;
+  rect {
+    stroke-width: 4px;
+  }
+
+  &.white rect {
+    fill: white;
+    stroke: black;
+  }
+
+  &.black {
+    rect {
+      fill: #f42c2c;
+      stroke: black;
+    }
+    
+    circle {
+      fill: white;
+      stroke-width: 2;
+      stroke: black;
+    }
+  }
 }
 
 .dice-container button {

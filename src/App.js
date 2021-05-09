@@ -11,7 +11,7 @@ const initGame = {
   blackHome: 0,
   blackJail: 0,
 
-  turn: 'black',
+  turn: null,
   dice: [],
   selectedChip: null,
   legalMoves: [],
@@ -23,16 +23,23 @@ const randomDice = ()=> {
   return ( dice[0] !== dice[1] ) ? dice : [...dice, ...dice];
 };
 
+const differentDice = ()=>{
+  let dice = [];
+  while(!dice.length || (dice[0] === dice[1])) dice = randomDice();
+  return dice;
+};
+
 const gameReducers = {
+  startGame: (state, {payload: dice}={})=> ({ ...state, dice: dice, turn: dice[0] > dice[1] ? 'black' : 'white' }),
   selectChip: (state, action)=> ({ ...state, selectedChip: action.payload }),
-  unselectChip: state=> ({ ...state, selectedChip: null }),
   setDice: (state, action)=> ({ ...state, dice: action.payload }),
   makeMove: (state, { payload: move })=> ({
     ...state,
     ...calculateBoardAfterMove(state, move),
     selectedChip: null,
   }),
-  endTurn: state => ({ ...state, turn: otherTurn[state.turn], dice: [] })
+  endTurn: state => ({ ...state, turn: otherTurn[state.turn], dice: [] }),
+  restartGame: () => initGame,
 };
 
 const gameReducer = (state, action)=> (gameReducers[action.type] || (i=> i))(state, action);
@@ -44,24 +51,25 @@ const actions = dispatch=> Object
 const App = ()=> {
   const [game, setGame] = useReducer(gameReducer, initGame);
 
-  const { selectChip, unselectChip, setDice, makeMove, endTurn } = useMemo(()=> actions(setGame), [setGame]);
-
+  const { selectChip, setDice, makeMove, endTurn, startGame, restartGame } = useMemo(()=> actions(setGame), [setGame]);
+  
   const roll = useCallback(()=> (
+    game.turn ?
     game.dice.length ? //|| (game.turn !== 'black')?
     null :
-    setDice(randomDice())
+    setDice(randomDice()) :
+    startGame(differentDice())
   ), [game.dice.length, game.turn, setDice]);
 
-  useMemo(()=> console.log(game), [game]);
-  
   return (
     <div className="App">
       <Game
         selectChip={selectChip}
-        unselectChip={unselectChip}
+        unselectChip={()=> selectChip(null)}
         makeMove={makeMove}
         endTurn={endTurn}
         roll={roll}
+        endGame={restartGame}
         {...game}
       />
     </div>

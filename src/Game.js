@@ -25,6 +25,7 @@ const Game = ({
 
   makeMove,
   endTurn,
+  endGame,
 })=> {
 
   const legalMoves = useMemo(()=> calculateLegalMoves({
@@ -52,8 +53,9 @@ const Game = ({
     selectedChip,
   ]);
 
-  useEffect(()=> console.log('lm', legalMoves), [legalMoves]);
-  useEffect(()=> dice.length && !legalMoves.length ? endTurn() : null, [legalMoves, dice]);
+  useEffect(()=> dice.length && !legalMoves.length ? setTimeout(endTurn, dice.length * 1000) : null, [legalMoves, dice]);
+
+  useEffect(()=> Math.max(whiteHome, blackHome) === 15 ? endGame() : null, [whiteHome, blackHome, endGame]);
   
   const chipClicked = useCallback((clicked)=>{
     // if no dice, do nothing (wait for roll)
@@ -68,8 +70,11 @@ const Game = ({
     } else {
       if( selectedChip === null ) {
         if (
-          (turn === 'black' && chips[clicked] > 0 ) ||
-          (turn === 'white' && chips[clicked] < 0 )
+          (
+            (turn === 'black' && chips[clicked] > 0 ) ||
+            (turn === 'white' && chips[clicked] < 0 )
+          ) &&
+          legalMoves.find(move => move.moveFrom === clicked)
         ) selectChip(clicked);
         
       } else {
@@ -95,12 +100,20 @@ const Game = ({
 
     legalMovesForSelectedChip,
   ]);
+
+  const chipDoubleClicked = useCallback((clicked)=>{
+    if( !dice.length ) return;
+    const moveIfLegal = legalMoves.find(move=> move.moveFrom === clicked && move.moveTo.includes?.('Home'));
+
+    if( moveIfLegal ) makeMove(moveIfLegal);
+    
+  }, [dice, legalMoves]);
   
   return (
     <div className='game-container'>
       <Board
         onClick={chipClicked}
-        onDoubleClick={i=> console.log(i, 'dblclicked')}
+        onDoubleClick={chipDoubleClicked}
         {...{
           whiteHome,
           blackHome,
@@ -115,7 +128,7 @@ const Game = ({
         {!dice.length ? (
           <button onClick={roll}>roll</button>
         ) : (
-          <Dice dice={dice} />
+          <Dice dice={dice} turn={turn} />
         )}
       </div>
     </div>
