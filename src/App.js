@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useMemo } from 'react';
+import React, { useCallback, useReducer, useMemo, useEffect, useState } from 'react';
 import './App.scss';
 
 import Game from './Game';
@@ -51,6 +51,13 @@ const actions = dispatch=> Object
 const App = ()=> {
   const [game, setGame] = useReducer(gameReducer, initGame);
 
+  const [gameMode, setGameMode] = useState('cp'); // local, remote-white, remote-black
+
+  // useEffect [turn] -> if it's the cp turn, roll -> effect? cpMakeMove()
+  // if it's remote's turn, do nothing -> the firebase socket will update the turn eventually
+
+  // additionally, roll should do nothing if it isn't my turn (be it remote or cp)
+  
   const { selectChip, setDice, makeMove, endTurn, startGame, restartGame } = useMemo(()=> actions(setGame), [setGame]);
   
   const roll = useCallback(()=> (
@@ -61,6 +68,8 @@ const App = ()=> {
     startGame(differentDice())
   ), [game.dice.length, game.turn, setDice]);
 
+
+  
   return (
     <div className="App">
       <Game

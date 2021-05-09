@@ -1252,8 +1252,6 @@ every time the dice change, we'll want to keep in our game state a list of legal
 (once we have that, we'll move on to `calculateBoardAfterMove`... let's not get ahead of ourselves though)
 
 
-((( these are old notes, review them nik! )))
-
 `$ touch src/util.js`
 
 
@@ -1560,8 +1558,6 @@ while that doesn't test every possible case, it is fairly exhaustive and should 
 
 #### testing board after move (jail, captures, normal moves, home)
 
-((()))
-
 
 #### finally moving the pieces
 
@@ -1572,8 +1568,6 @@ while that doesn't test every possible case, it is fairly exhaustive and should 
 in the `chipClicked` function
 
 
-
-((( these are old notes - review them nik! )))
 
 
 ### ending the turn (blockades)
@@ -1620,7 +1614,7 @@ that `setState` call will also have a callback to call another new function (we 
         // else this is a second click
         // if the space selected is a valid move, makeMove(clicked)
         const moveIfLegal = legalMoves.find(move=> move.moveTo === clicked);
-        console.log(moveIfLegal);
+
         if( moveIfLegal ) makeMove(moveIfLegal);
 
 //... (App)
@@ -1827,30 +1821,28 @@ now that everything works well, we should reset the game if one player wins!
 
   const { selectChip, setDice, makeMove, endTurn, startGame, restartGame } = useMemo(()=> actions(setGame), [setGame]);
 
-        endGame={restartGame}
-```
-
-<sub>./src/Game.js</sub>
-```js
-
-// props
-  endGame,
-
-
-  useEffect(()=> Math.max(whiteHome, blackHome) === 15 ? endGame() : null, [whiteHome, blackHome, endGame]);
+  useEffect(()=> Math.max(game.whiteHome, game.blackHome) === 15 ? restartGame() : null, [game.whiteHome, game.blackHome, restartGame]);
 
 ```
-
 
 congrats on getting through the 2 player local game
 
 next up - the computer player!
 
-((()))
 
 <a name="step2"></a>
 ## step 2: Build a computer player for 1-player local game
 
+### triggering the computer player
+
+from the `App`, when the turn changes, we should check the game mode and trigger the correct logic
+
+we are writing this (of course) to be future proof when we add remote 2p
+
+<sub>./src/App.js</sub>
+```js
+
+```
 
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

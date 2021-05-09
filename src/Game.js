@@ -25,7 +25,6 @@ const Game = ({
 
   makeMove,
   endTurn,
-  endGame,
 })=> {
 
   const legalMoves = useMemo(()=> calculateLegalMoves({
@@ -54,8 +53,6 @@ const Game = ({
   ]);
 
   useEffect(()=> dice.length && !legalMoves.length ? setTimeout(endTurn, dice.length * 1000) : null, [legalMoves, dice]);
-
-  useEffect(()=> Math.max(whiteHome, blackHome) === 15 ? endGame() : null, [whiteHome, blackHome, endGame]);
   
   const chipClicked = useCallback((clicked)=>{
     // if no dice, do nothing (wait for roll)
